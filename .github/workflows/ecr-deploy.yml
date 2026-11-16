@@ -32,7 +32,7 @@ jobs:
 
       - name: Build Docker Image
         run: |
-          docker build -t incident-app:latest .
+          docker build -t incident-app:latest -f app/Dockerfile app/
 
       - name: Tag Docker Image
         run: |
