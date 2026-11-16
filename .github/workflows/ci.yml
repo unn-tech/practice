@@ -1,1 +1,69 @@
+name: Python CI-CD Pipeline
 
+on:
+  push:
+    branches:
+      - main
+
+  pull_request:
+    branches:
+      - main
+
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  packages: write
+
+env:
+  IMAGE_NAME: incident-app
+
+jobs:
+
+  build-and-test:
+    name: Build and Test
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install Dependencies
+        run: |
+          pip install -r requirements.txt
+
+      - name: Run Tests
+        run: |
+          python -m pytest
+
+      - name: Build Docker Image
+        run: |
+          docker build -t incident-app:latest .
+
+  push-image:
+    name: Push Docker Image
+    needs: build-and-test
+    if: github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Login to GHCR
+        run: |
+          echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io \
+            -u "${{ github.actor }}" --password-stdin
+
+      - name: Build and Tag Image
+        run: |
+          docker build -t ghcr.io/${{ github.repository_owner }}/incident-app:latest .
+
+      - name: Push Image
+        run: |
+          docker push ghcr.io/${{ github.repository_owner }}/incident-app:latest
